@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+/*
+ * Bergamota OS — design tokens (guia de UI: paleta laranja + cinzas, Roboto,
+ * cartões com sombra leve, cantos discretos, app bar laranja, FAB redondo).
+ *
+ * As escalas abaixo substituem as cores padrão do Tailwind usadas pelas telas
+ * herdadas (amber / emerald / rose / stone...), assim todo o sistema segue o
+ * mesmo guia sem reescrever cada componente.
+ */
+@theme {
+  --font-sans: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Primária — laranja */
+  --color-brand: #ff9c2e;
+  --color-brand-dark: #e77f11;
+  --color-brand-50: #fff6eb;
+  --color-brand-100: #ffe9cf;
+
+  --color-amber-50: #fff6eb;
+  --color-amber-100: #ffe9cf;
+  --color-amber-200: #ffd29f;
+  --color-amber-300: #ffbc6f;
+  --color-amber-400: #ffab4d;
+  --color-amber-500: #ff9c2e;
+  --color-amber-600: #e77f11;
+  --color-amber-700: #c0680c;
+  --color-amber-800: #99520a;
+  --color-amber-900: #733d07;
+  --color-amber-950: #4a2704;
+
+  --color-orange-50: #fff6eb;
+  --color-orange-100: #ffe9cf;
+  --color-orange-200: #ffd29f;
+  --color-orange-300: #ffbc6f;
+  --color-orange-400: #ffab4d;
+  --color-orange-500: #ff9c2e;
+  --color-orange-600: #e77f11;
+  --color-orange-700: #c0680c;
+  --color-orange-800: #99520a;
+  --color-orange-900: #733d07;
+
+  /* Sucesso — verde #68C166 */
+  --color-emerald-50: #f0f9ef;
+  --color-emerald-100: #dcf1db;
+  --color-emerald-200: #bce4ba;
+  --color-emerald-300: #97d494;
+  --color-emerald-400: #7dc97a;
+  --color-emerald-500: #68c166;
+  --color-emerald-600: #4fa84d;
+  --color-emerald-700: #3e863c;
+  --color-emerald-800: #30682f;
+  --color-emerald-900: #244e23;
+  --color-emerald-950: #152e15;
+  --color-green-50: #f0f9ef;
+  --color-green-100: #dcf1db;
+  --color-green-500: #68c166;
+  --color-green-600: #4fa84d;
+  --color-green-700: #3e863c;
+
+  /* Erro — vermelho #EE001D / rosa #FFE9EB */
+  --color-rose-50: #fff4f5;
+  --color-rose-100: #ffe9eb;
+  --color-rose-200: #ffc7cc;
+  --color-rose-300: #ff939c;
+  --color-rose-400: #ff4f5e;
+  --color-rose-500: #ee001d;
+  --color-rose-600: #cc0019;
+  --color-rose-700: #a30014;
+  --color-rose-800: #7d0010;
+  --color-rose-900: #5c000c;
+  --color-rose-950: #3a0007;
+  --color-red-50: #fff4f5;
+  --color-red-100: #ffe9eb;
+  --color-red-200: #ffc7cc;
+  --color-red-500: #ee001d;
+  --color-red-600: #cc0019;
+  --color-red-700: #a30014;
+
+  /* Informação — azul #4A90E2 / #E7FBFF */
+  --color-blue-50: #e7fbff;
+  --color-blue-100: #d3ecfb;
+  --color-blue-200: #a9d2f5;
+  --color-blue-300: #7eb7ee;
+  --color-blue-400: #62a3e8;
+  --color-blue-500: #4a90e2;
+  --color-blue-600: #2f74c6;
+  --color-blue-700: #245b9e;
+  --color-blue-800: #1c4679;
+  --color-blue-900: #153459;
+  --color-sky-50: #e7fbff;
+  --color-sky-100: #d3ecfb;
+  --color-sky-500: #4a90e2;
+  --color-sky-600: #2f74c6;
+  --color-sky-700: #245b9e;
+
+  /* Neutros — cinzas do guia (#A6A6A6, #666666, #2F2F2F, #272A33) */
+  --color-stone-50: #fafafa;
+  --color-stone-100: #f5f5f5;
+  --color-stone-200: #eeeeee;
+  --color-stone-300: #e0e0e0;
+  --color-stone-400: #a6a6a6;
+  --color-stone-500: #8a8a8a;
+  --color-stone-600: #666666;
+  --color-stone-700: #4d4d4d;
+  --color-stone-800: #2f2f2f;
+  --color-stone-900: #272a33;
+  --color-stone-950: #1b1d23;
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #eeeeee;
+  --color-gray-300: #e0e0e0;
+  --color-gray-400: #a6a6a6;
+  --color-gray-500: #8a8a8a;
+  --color-gray-600: #666666;
+  --color-gray-700: #4d4d4d;
+  --color-gray-800: #2f2f2f;
+  --color-gray-900: #272a33;
+  --color-gray-950: #1b1d23;
+
+  /* Cantos discretos (Material) */
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 12px;
+
+  /* Elevação */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.08), 0 1px 1px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 4px 10px rgb(0 0 0 / 0.12), 0 2px 4px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 8px 20px rgb(0 0 0 / 0.14);
+  --shadow-2xl: 0 12px 32px rgb(0 0 0 / 0.18);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #f5f5f5;
+  color: #2f2f2f;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números alinhados em tabelas e KPIs */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rótulos de seção no estilo do guia: caixa alta, cinza, espaçado */
+.section-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #666666;
+}
+
+/* Botões do guia: texto em caixa alta, pequeno, peso médio */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background-color 0.15s, box-shadow 0.15s, color 0.15s;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn:disabled {
+  cursor: not-allowed;
+  background: #f5f5f5 !important;
+  color: #c4c4c4 !important;
+  box-shadow: none !important;
+  border-color: #eeeeee !important;
+}
+.btn-primary {
+  background: #ff9c2e;
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover {
+  background: #f58f1f;
+}
+.btn-primary:active {
+  background: #e77f11;
+}
+.btn-secondary {
+  background: #fff;
+  color: #2f2f2f;
+  border: 1px solid #e0e0e0;
+}
+.btn-secondary:hover {
+  background: #fafafa;
+}
+.btn-secondary:active {
+  background: #eeeeee;
+}
+.btn-text {
+  color: #e77f11;
+  padding: 0 8px;
+}
+.btn-text:hover {
+  background: #fff6eb;
+}
+.btn-danger {
+  background: #ee001d;
+  color: #fff;
+}
+
+/* Campos de formulário no estilo "underline" do guia */
+.field {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #e0e0e0;
+  background: transparent;
+  padding: 8px 0 6px;
+  font-size: 14px;
+  color: #2f2f2f;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field:focus {
+  border-bottom: 2px solid #ff9c2e;
+  padding-bottom: 5px;
+}
+.field::placeholder {
+  color: #a6a6a6;
+}
+.field-label {
+  display: block;
+  font-size: 12px;
+  color: #666666;
+}
+
+/* Scrollbar discreta */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d4 transparent;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
