@@ -126,7 +126,12 @@ function DevPreview() {
       ([ingredients, recipes, priceHistory, settings, sales, transactions, closedDays]) => {
         primeCatalog({ ingredients, recipes, priceHistory, settings });
         prime({
-          sales: sales.map((s: any, i: number) => ({ ...s, id: `s${i}`, is_aggregate: Boolean(s.aggregate) })),
+          sales: sales.map((s: any, i: number) => ({
+            ...s,
+            id: `s${i}`,
+            is_aggregate: Boolean(s.aggregate),
+            items: [{ id: `s${i}-1`, sale_id: `s${i}`, product_name: null, quantity: 1, unit_price: s.amount, amount: s.amount }],
+          })),
           transactions: transactions.map((t: any, i: number) => ({ ...t, id: `t${i}`, grp: t.group })),
           closedDays,
           recurring: transactions

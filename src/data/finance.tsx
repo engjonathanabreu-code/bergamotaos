@@ -7,7 +7,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { supabase, fetchAll } from '../lib/supabase';
 import { reportSyncError } from '../utils/storage';
 import { daysInMonth } from '../lib/format';
-import type { Budget, ClosedDay, FinGroup, FinTransaction, RecurringExpense, Sale } from '../types';
+import type { Budget, ClosedDay, FinGroup, FinTransaction, RecurringExpense, Sale, SaleItem } from '../types';
 
 interface FinanceState {
   sales: Sale[];
@@ -17,12 +17,23 @@ interface FinanceState {
   budgets: Budget[];
 }
 
+/** Item de uma venda antes de ser gravado (sem id nem sale_id). */
+export type NewSaleItem = Omit<SaleItem, 'id' | 'sale_id'>;
+
+export interface NewSale {
+  date: string;
+  method: Sale['method'];
+  register: string;
+  is_aggregate: boolean;
+  items: NewSaleItem[];
+}
+
 interface FinanceApi extends FinanceState {
   loaded: boolean;
   load: () => Promise<void>;
   /** Apenas desenvolvimento (?preview): carrega estado sem banco. */
   prime: (s: Partial<FinanceState>) => void;
-  addSales: (rows: Omit<Sale, 'id'>[]) => Promise<void>;
+  addSale: (sale: NewSale) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   saveTransaction: (t: Omit<FinTransaction, 'id'> & { id?: string }) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -37,12 +48,13 @@ interface FinanceApi extends FinanceState {
 const Ctx = createContext<FinanceApi | null>(null);
 
 const num = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0);
-const normSale = (r: any): Sale => ({
+const normItem = (r: any): SaleItem => ({
   ...r,
-  amount: num(r.amount),
   quantity: num(r.quantity) || 1,
   unit_price: r.unit_price == null ? null : num(r.unit_price),
+  amount: num(r.amount),
 });
+const normSale = (r: any, items: SaleItem[]): Sale => ({ ...r, amount: num(r.amount), items });
 const normTx = (r: any): FinTransaction => ({ ...r, value: num(r.value), competencia: String(r.competencia).trim() });
 const normRec = (r: any): RecurringExpense => ({ ...r, value: num(r.value) });
 
@@ -57,15 +69,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    const [sales, transactions, recurring, closedDays, budgets] = await Promise.all([
+    const [sales, items, transactions, recurring, closedDays, budgets] = await Promise.all([
       fetchAll<any>((f, t) => supabase.from('bg_sales').select('*').order('date').order('created_at').range(f, t)),
+      fetchAll<any>((f, t) => supabase.from('bg_sale_items').select('*').order('created_at').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('bg_transactions').select('*').order('date').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('bg_recurring').select('*').order('description').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('bg_closed_days').select('*').range(f, t)),
       fetchAll<any>((f, t) => supabase.from('bg_budgets').select('*').range(f, t)),
     ]);
+    const itemsBySale = new Map<string, SaleItem[]>();
+    for (const r of items) {
+      const it = normItem(r);
+      itemsBySale.set(it.sale_id, [...(itemsBySale.get(it.sale_id) ?? []), it]);
+    }
     setState({
-      sales: sales.map(normSale),
+      sales: sales.map((s: any) => normSale(s, itemsBySale.get(s.id) ?? [])),
       transactions: transactions.map(normTx),
       recurring: recurring.map(normRec),
       closedDays,
@@ -97,13 +115,45 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const addSales = useCallback(async (rows: Omit<Sale, 'id'>[]) => {
-    const withIds = rows.map((r) => ({ ...r, id: crypto.randomUUID() }));
-    await optimistic(
-      (s) => ({ ...s, sales: [...s.sales, ...withIds] }),
-      () => supabase.from('bg_sales').insert(withIds.map(({ created_at, ...r }) => r))
-    );
-  }, [optimistic]);
+  /** Grava a venda e seus itens numa única transação (função bg_create_sale). */
+  const addSale = useCallback(async (sale: NewSale) => {
+    const tempId = crypto.randomUUID();
+    const optimisticSale: Sale = {
+      id: tempId,
+      date: sale.date,
+      method: sale.method,
+      register: sale.register,
+      is_aggregate: sale.is_aggregate,
+      amount: Math.round(sale.items.reduce((t, i) => t + i.amount, 0) * 100) / 100,
+      created_at: new Date().toISOString(),
+      items: sale.items.map((i) => ({ ...i, id: crypto.randomUUID(), sale_id: tempId })),
+    };
+    let snapshot: FinanceState | null = null;
+    setState((s) => {
+      snapshot = s;
+      return { ...s, sales: [...s.sales, optimisticSale] };
+    });
+    const { data, error } = await supabase.rpc('bg_create_sale', {
+      p_date: sale.date,
+      p_method: sale.method,
+      p_register: sale.register,
+      p_is_aggregate: sale.is_aggregate,
+      p_items: sale.items,
+    });
+    if (error || !data) {
+      if (snapshot) setState(snapshot);
+      reportSyncError(error?.message ?? 'Venda não gravada');
+      throw new Error(error?.message ?? 'Venda não gravada');
+    }
+    // troca o id provisório pelo id real gravado no banco
+    const realId = String(data);
+    setState((s) => ({
+      ...s,
+      sales: s.sales.map((x) =>
+        x.id === tempId ? { ...x, id: realId, items: x.items.map((i) => ({ ...i, sale_id: realId })) } : x
+      ),
+    }));
+  }, []);
 
   const deleteSale = useCallback(async (id: string) => {
     await optimistic(
@@ -216,7 +266,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       loaded,
       load,
       prime,
-      addSales,
+      addSale,
       deleteSale,
       saveTransaction,
       deleteTransaction,
@@ -226,7 +276,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setClosedDay,
       setBudget,
     }),
-    [state, loaded, load, prime, addSales, deleteSale, saveTransaction, deleteTransaction, saveRecurring, deleteRecurring, generateRecurring, setClosedDay, setBudget]
+    [state, loaded, load, prime, addSale, deleteSale, saveTransaction, deleteTransaction, saveRecurring, deleteRecurring, generateRecurring, setClosedDay, setBudget]
   );
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

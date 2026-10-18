@@ -6,6 +6,7 @@ import { useFinance } from '../../data/finance';
 import { SALE_METHOD_LABELS, type Sale, type SaleMethod } from '../../types';
 import { compact, currentMonth, daysInMonth, fullDate, money, monthLong, pct } from '../../lib/format';
 import { MoneyTooltip } from './shared';
+import { itemLabel, saleTitle } from './saleSummary';
 
 const ALL_METHODS: SaleMethod[] = ['dinheiro', 'pix', 'debito', 'credito', 'outro'];
 
@@ -46,13 +47,14 @@ export function VendasView() {
         tickets++;
         ticketSum += s.amount;
       }
-      if (s.product_name) {
-        const qty = s.quantity ?? 1;
-        const key = s.recipe_id || s.product_name;
-        const cur = products.get(key) ?? { name: s.product_name, qty: 0, total: 0 };
-        cur.qty += qty;
-        cur.total += s.amount;
-        items += qty;
+      // ranking e contagem vêm dos itens; venda avulsa (sem produto) não entra
+      for (const it of s.items) {
+        if (!it.product_name) continue;
+        const key = it.recipe_id || it.product_name;
+        const cur = products.get(key) ?? { name: it.product_name, qty: 0, total: 0 };
+        cur.qty += it.quantity;
+        cur.total += it.amount;
+        items += it.quantity;
         products.set(key, cur);
       }
     }
@@ -216,11 +218,12 @@ export function VendasView() {
                 <span className="tabular text-sm text-stone-800">{money(g.total)}</span>
               </div>
               {g.rows.map((s) => {
-                const qty = s.quantity ?? 1;
                 const time = s.created_at ? new Date(s.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                const single = s.items.length === 1 ? s.items[0] : null;
                 const details = [
-                  qty > 1 && `${qty}×`,
-                  s.product_name && s.unit_price != null && `${money(s.unit_price)} un.`,
+                  s.items.length > 1 && `${s.items.length} itens`,
+                  single?.product_name && single.quantity > 1 && `${single.quantity}×`,
+                  single?.product_name && single.unit_price != null && `${money(single.unit_price)} un.`,
                   SALE_METHOD_LABELS[s.method],
                   s.register === 'cz' && 'CZ',
                   s.is_aggregate && 'total consolidado',
@@ -235,8 +238,18 @@ export function VendasView() {
                       {ICONS[s.method]}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-stone-800 truncate">{s.product_name || 'Venda avulsa'}</div>
+                      <div className="text-sm text-stone-800 truncate">{saleTitle(s)}</div>
                       <div className="text-[11px] text-stone-400 truncate">{details.join(' · ')}</div>
+                      {s.items.length > 1 && (
+                        <ul className="mt-1 space-y-0.5">
+                          {s.items.map((it) => (
+                            <li key={it.id} className="flex justify-between gap-3 text-[11px] text-stone-500">
+                              <span className="truncate">{itemLabel(it)}</span>
+                              <span className="tabular shrink-0">{money(it.amount)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                     <span className="tabular text-sm text-stone-800">{money(s.amount)}</span>
                     <button

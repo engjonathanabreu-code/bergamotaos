@@ -262,21 +262,28 @@ export const SALE_METHOD_LABELS: Record<SaleMethod, string> = {
   outro: 'Outro',
 };
 
-/** Uma venda (ticket) do caixa. */
+/** Item de uma venda: um produto da ficha técnica, ou um valor avulso (recipe_id e product_name vazios). */
+export interface SaleItem {
+  id: string;
+  sale_id: string;
+  recipe_id?: string | null;
+  product_name?: string | null; // snapshot do nome no momento da venda
+  quantity: number;
+  unit_price?: number | null; // preço unitário usado na venda (editável)
+  amount: number; // quantity * unit_price (ou o valor avulso)
+}
+
+/** Uma venda (ticket) do caixa: forma de pagamento, total e um ou mais itens. */
 export interface Sale {
   id: string;
   date: string; // YYYY-MM-DD
   method: SaleMethod;
-  amount: number;
+  amount: number; // total da venda = soma dos itens
   register: string; // 'principal' | 'cz'
   is_aggregate: boolean; // lançamento consolidado (fora do ticket médio)
   note?: string | null;
   created_at?: string;
-  // Venda por produto (ficha técnica). Vazio em vendas avulsas e em lançamentos antigos.
-  recipe_id?: string | null;
-  product_name?: string | null; // snapshot do nome no momento da venda
-  quantity?: number; // default 1
-  unit_price?: number | null; // preço unitário usado na venda (editável)
+  items: SaleItem[];
 }
 
 export type FinGroup = ExpenseGroup | 'receita';
